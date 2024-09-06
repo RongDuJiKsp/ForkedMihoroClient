@@ -2,7 +2,7 @@ use crate::cmd::ProxyCommands;
 use crate::config::{apply_mihomo_override, parse_config, Config};
 use crate::proxy::{proxy_export_cmd, proxy_unset_cmd};
 use crate::systemctl::Systemctl;
-use crate::utils::{create_parent_dir, decode_base64, delete_file, download_file, extract_gzip};
+use crate::utils::{create_parent_dir, delete_file, download_file, extract_gzip, get_file_from_system_or_remote};
 
 use std::fs;
 use std::os::unix::prelude::PermissionsExt;
@@ -76,16 +76,14 @@ impl Mihoro {
             fs::set_permissions(&self.mihomo_target_binary_path, executable)?;
         }
 
-        // Download remote mihomo config and apply override
-        download_file(
+        // Copy Or Download remote mihomo config and apply override
+        get_file_from_system_or_remote(
             &client,
             &self.config.remote_config_url,
             &self.mihomo_target_config_path,
         )
             .await?;
 
-        //Try to Decode base64 config
-        decode_base64(&self.mihomo_target_config_path)?;
 
         apply_mihomo_override(&self.mihomo_target_config_path, &self.config.mihomo_config)?;
 

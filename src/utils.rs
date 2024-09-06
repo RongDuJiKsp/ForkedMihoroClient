@@ -1,9 +1,4 @@
-use std::{
-    cmp::min,
-    fs::{self, File},
-    io::{self, Write},
-    path::Path,
-};
+use std::{cmp::min, fs::{self, File}, io::{self, Write}, path::Path};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom};
 use anyhow::{anyhow, Context, Result};
@@ -49,8 +44,7 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<()>
     // Create shared http client for multiple downloads when possible
     let res = client
         .get(url)
-        .send()
-        .await
+        .send().await
         .with_context(|| format!("failed to GET from '{}'", &url))?;
 
     // If content length is not available or 0, use a spinner instead of a progress bar
@@ -59,12 +53,11 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<()>
 
     let bar_style = ProgressStyle::with_template(
         "{prefix:.blue}: {msg}\n          {elapsed_precise} [{bar:30.white/blue}] \
-         {bytes}/{total_bytes} ({bytes_per_sec}, {eta})",
-    )?
-        .progress_chars("-  ");
+         {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+    )?.progress_chars("-  ");
     let spinner_style = ProgressStyle::with_template(
         "{prefix:.blue}: {wide_msg}\n        \
-         {spinner} {elapsed_precise} - Download speed {bytes_per_sec}",
+         {spinner} {elapsed_precise} - Download speed {bytes_per_sec}"
     )?;
 
     if total_size == 0 {
@@ -74,10 +67,7 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<()>
     }
     pb.set_prefix("download");
 
-    let truncated_url = Truncatable::from(url)
-        .truncator("...".into())
-        .truncate(64)
-        .underline();
+    let truncated_url = Truncatable::from(url).truncator("...".into()).truncate(64).underline();
     pb.set_message(format!("Downloading {truncated_url}"));
 
     // Start file download and update progress bar when new data chunk is received
@@ -88,8 +78,7 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<()>
     while let Some(item) = stream.next().await {
         let chunk = item.with_context(|| "error while downloading file")?;
 
-        file.write(&chunk)
-            .with_context(|| "error while writing to file")?;
+        file.write(&chunk).with_context(|| "error while writing to file")?;
         if total_size != 0 {
             let new = min(downloaded + (chunk.len() as u64), total_size);
             downloaded = new;
@@ -122,20 +111,13 @@ pub fn extract_gzip(gzip_path: &str, filename: &str, prefix: &str) -> Result<()>
     let mut file = fs::File::create(filename)?;
     io::copy(&mut archive, &mut file)?;
     fs::remove_file(gzip_path)?;
-    println!(
-        "{} Extracted to {}",
-        prefix.green(),
-        filename.underline().yellow()
-    );
+    println!("{} Extracted to {}", prefix.green(), filename.underline().yellow());
     Ok(())
 }
 //try to decode a base64 file in place, the file must exist,if the file is not base64 encoded ,it is ok
-pub fn decode_base64(filename: &str) -> Result<()> {
+pub fn try_decode_base64_and_overwrite_file(filename: &str) -> Result<()> {
     // copy file to buffer
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(filename)?;
+    let mut file = OpenOptions::new().read(true).write(true).open(filename)?;
     let mut base64_buf = Vec::<u8>::new();
     file.read_to_end(&mut base64_buf)?;
     //try decode
@@ -146,13 +128,26 @@ pub fn decode_base64(filename: &str) -> Result<()> {
     }
     //try to clear file
     if let Err(e) = file.set_len(0) {
-        return Err(anyhow!("fail to clear file,why? {}",e));
+        return Err(anyhow!("fail to clear file,why? {}", e));
     }
     if let Err(e) = file.seek(SeekFrom::Start(0)) {
-        return Err(anyhow!("fail to clear file,why? {}",e));
+        return Err(anyhow!("fail to clear file,why? {}", e));
     }
     //write bytes to file
     let decoded_bytes = decoded.expect("this can't be happening");
     file.write_all(&decoded_bytes)?;
+    Ok(())
+}
+//get file from remote or local file system
+pub async fn get_file_from_system_or_remote(client: &Client, url: &str, path: &str) -> Result<()> {
+    let suffix_url = "file://";
+    //if url is remote url ,download file
+    if !url.starts_with(suffix_url) {
+        download_file(client, url, path).await?;
+        return Ok(());
+    }
+    //copy file system file to path
+    create_parent_dir(path)?;
+    fs::copy(path.replace(suffix_url, ""), path)?;
     Ok(())
 }
