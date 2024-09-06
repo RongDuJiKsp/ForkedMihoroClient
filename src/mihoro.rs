@@ -29,7 +29,7 @@ pub struct Mihoro {
 impl Mihoro {
     pub fn new(config_path: &String) -> Result<Mihoro> {
         let config = parse_config(tilde(&config_path).as_ref())?;
-        return Ok(Mihoro {
+        Ok(Mihoro {
             prefix: String::from("mihoro:"),
             config: config.clone(),
             mihomo_target_binary_path: tilde(&config.mihomo_binary_path).to_string(),
@@ -41,7 +41,7 @@ impl Mihoro {
                 config.user_systemd_root
             ))
                 .to_string(),
-        });
+        })
     }
 
     pub async fn setup(&self, client: Client) -> Result<()> {
@@ -60,7 +60,7 @@ impl Mihoro {
             );
         } else {
             // Download mihomo binary and set permission to executable
-            download_file(
+            get_file_from_system_or_remote(
                 &client,
                 &self.config.remote_mihomo_binary_url,
                 "mihomo-downloaded-binary.tar.gz",
