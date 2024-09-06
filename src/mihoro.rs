@@ -128,20 +128,20 @@ impl Mihoro {
             // Download geodata files based on `geodata_mode`
             let geodata_mode = self.config.mihomo_config.geodata_mode.unwrap_or(false);
             if geodata_mode {
-                download_file(
+                get_file_from_system_or_remote(
                     &client,
                     &geox_url.geoip,
                     format!("{}/geoip.dat", &self.mihomo_target_config_root).as_str(),
                 )
                     .await?;
-                download_file(
+                get_file_from_system_or_remote(
                     &client,
                     &geox_url.geosite,
                     format!("{}/geosite.dat", &self.mihomo_target_config_root).as_str(),
                 )
                     .await?;
             } else {
-                download_file(
+                get_file_from_system_or_remote(
                     &client,
                     &geox_url.mmdb,
                     format!("{}/country.mmdb", &self.mihomo_target_config_root).as_str(),
