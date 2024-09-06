@@ -9,6 +9,7 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
+use shellexpand::tilde;
 use truncatable::Truncatable;
 
 /// Creates the parent directory for a given path if it does not exist.
@@ -148,6 +149,6 @@ pub async fn get_file_from_system_or_remote(client: &Client, url: &str, path: &s
     }
     //copy file system file to path
     create_parent_dir(path)?;
-    fs::copy(path.replace(suffix_url, ""), path)?;
+    fs::copy(tilde(&path.replace(suffix_url, "")).to_string(), path)?;
     Ok(())
 }
