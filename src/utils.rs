@@ -45,7 +45,8 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<()>
     // Create shared http client for multiple downloads when possible
     let res = client
         .get(url)
-        .send().await
+        .send()
+        .await
         .with_context(|| format!("failed to GET from '{}'", &url))?;
 
     // If content length is not available or 0, use a spinner instead of a progress bar
@@ -112,7 +113,11 @@ pub fn extract_gzip(gzip_path: &str, filename: &str, prefix: &str) -> Result<()>
     let mut file = fs::File::create(filename)?;
     io::copy(&mut archive, &mut file)?;
     fs::remove_file(gzip_path)?;
-    println!("{} Extracted to {}", prefix.green(), filename.underline().yellow());
+    println!(
+        "{} Extracted to {}",
+        prefix.green(),
+        filename.underline().yellow()
+    );
     Ok(())
 }
 //try to decode a base64 file in place, the file must exist,if the file is not base64 encoded ,it is ok
