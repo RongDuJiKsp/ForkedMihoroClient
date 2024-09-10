@@ -9,6 +9,7 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
+use shellexpand::tilde;
 use truncatable::Truncatable;
 
 /// Creates the parent directory for a given path if it does not exist.
@@ -44,7 +45,8 @@ pub async fn download_file(client: &Client, url: &str, path: &str) -> Result<()>
     // Create shared http client for multiple downloads when possible
     let res = client
         .get(url)
-        .send().await
+        .send()
+        .await
         .with_context(|| format!("failed to GET from '{}'", &url))?;
 
     // If content length is not available or 0, use a spinner instead of a progress bar
@@ -111,7 +113,11 @@ pub fn extract_gzip(gzip_path: &str, filename: &str, prefix: &str) -> Result<()>
     let mut file = fs::File::create(filename)?;
     io::copy(&mut archive, &mut file)?;
     fs::remove_file(gzip_path)?;
-    println!("{} Extracted to {}", prefix.green(), filename.underline().yellow());
+    println!(
+        "{} Extracted to {}",
+        prefix.green(),
+        filename.underline().yellow()
+    );
     Ok(())
 }
 //try to decode a base64 file in place, the file must exist,if the file is not base64 encoded ,it is ok
@@ -148,6 +154,6 @@ pub async fn get_file_from_system_or_remote(client: &Client, url: &str, path: &s
     }
     //copy file system file to path
     create_parent_dir(path)?;
-    fs::copy(path.replace(suffix_url, ""), path)?;
+    fs::copy(tilde(&path.replace(suffix_url, "")).to_string(), path)?;
     Ok(())
 }
